@@ -13,7 +13,6 @@ import (
 	"time"
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
 )
 
 const JPushServerUrl string = "http://api.jpush.cn:8800/v2/push"
