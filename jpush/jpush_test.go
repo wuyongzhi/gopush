@@ -6,5 +6,8 @@ import "testing"
 
 
 func Test_Message(t *testing.T) {
-	t.Log("ok")
+	m := Message{}
+	response, err := m.Send(nil)
+
+	t.Log(response, err)
 }
