@@ -11,18 +11,35 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 )
 
 const JPushServerUrl string = "http://api.jpush.cn:8800/v2/push"
+const JPushServerUrlSsl string = "https://api.jpush.cn:443/v2/push"
+
+type Request struct {
+	url.Values
+}
 
 type Message struct {
-	url.Values
+	BuilderId int		`json:"n_builder_id"`
+	Title string		`json:"n_title"`
+	Content string		`json:"n_content"`
+	Extras string		`json:"n_extras"`
 }
 
 type Response struct {
 	ErrCode int    `json:"errcode"`
 	ErrMsg  string `json:"errmsg"`
 	MsgId   string `json:"msg_id"`
+}
+
+func NewRequest() *Request {
+	m := Request{}
+	m.Values = make(map[string][]string, 8)
+	return &m
 }
 
 func (r *Response) IsOk() bool {
@@ -33,22 +50,20 @@ func (r *Response) IsFailed() bool {
 	return r.ErrCode != 0
 }
 
-
-func (m *Message) Set(key, value string) *Message {
-	m.Set(key, value)
-	return m
+func (m *Request) Set(key, value string){
+	m.Values.Set(key, value)
 }
 
-func (m *Message) SetInt(key string, value int) *Message {
-	return m.Set(key, strconv.Itoa(value))
+func (m *Request) SetInt(key string, value int){
+	m.Set(key, strconv.Itoa(value))
 }
 
-func (m *Message) SendNo(sendno int) *Message {
-	return m.SetInt("sendno", sendno)
+func (m *Request) SendNo(sendno int){
+	m.SetInt("sendno", sendno)
 }
 
-func (m *Message) AppKey(app_key string) *Message {
-	return m.Set("app_key", app_key)
+func (m *Request) AppKey(app_key string) {
+	m.Set("app_key", app_key)
 }
 
 const (
@@ -59,8 +74,8 @@ const (
 )
 
 const (
-	MessageTypeNotify = 1
-	MessageTypeCustom = 2
+	MsgTypeNotify = 1
+	MsgTypeCustom = 2
 )
 
 //	可以是以下值:
@@ -68,70 +83,71 @@ const (
 // 		ReceiverTypeTag
 // 		ReceiverTypeBoardcast
 // 		ReceiverTypeRegistrationID
-func (m *Message) ReceiverType(receiver_type int) *Message {
-	return m.SetInt("receiver_type", receiver_type)
+func (m *Request) ReceiverType(receiver_type int)  {
+	m.SetInt("receiver_type", receiver_type)
 }
 
-func (m *Message) ReceiverValue(receiver_values ... string) *Message {
-	return m.Set("receiver_value", strings.Join(receiver_values, ","))
+func (m *Request) ReceiverValue(receiver_values ...string) {
+	m.Set("receiver_value", strings.Join(receiver_values, ","))
 }
 
 //允许传递认证码自行认证，也可以在调用Send 时，传递有效的 master_secret 参数来生成认证码
-func (m *Message) VerificationCode(verification_code string) *Message {
-	return m.Set("verification_code", verification_code)
+func (m *Request) VerificationCode(verification_code string)  {
+	m.Set("verification_code", verification_code)
 }
 
 //可以是以下值：
 //
-// 	MessageTypeNotify
-// 	MessageTypeCustom
-func (m *Message) MsgType(msg_type int) *Message {
-	return m.SetInt("msg_type", msg_type)
+// 	MsgTypeNotify
+// 	MsgTypeCustom
+func (m *Request) MsgType(msg_type int)  {
+	m.SetInt("msg_type", msg_type)
 }
 
-func (m *Message) MsgContent(msg_content string) *Message {
-	return m.Set("msg_content", msg_content)
+func (m *Request) MsgContent(n_builder_id int, n_title, n_content, n_extras string) {
+	msg := Message{n_builder_id, n_title, n_content, n_extras}
+	bytes, _ := json.Marshal(msg)
+	m.Set("msg_content", string(bytes))
 }
 
-func (m *Message) SendDescription(send_description string) *Message {
-	return m.Set("send_description", send_description)
+func (m *Request) SendDescription(send_description string)  {
+	m.Set("send_description", send_description)
 }
 
 //按可变参数，挨个传递“平台”，方法会用逗号将它们拼起来
-func (m *Message) Platform(platforms ...string) *Message {
-	return m.Set("platform", strings.Join(platforms, ","))
+func (m *Request) Platform(platforms ...string)  {
+	m.Set("platform", strings.Join(platforms, ","))
 }
 
 // 仅IOS  适用 0 开发环境；1 生产环境
-func (m *Message) APNSProduction(apns_production int) *Message {
-	return m.SetInt("apns_production", apns_production)
+func (m *Request) APNSProduction(apns_production int)  {
+	m.SetInt("apns_production", apns_production)
 }
 
-func (m *Message) TimeToLive(time_to_live int) *Message {
-	return m.SetInt("time_to_live", time_to_live)
+func (m *Request) TimeToLive(time_to_live int)  {
+	m.SetInt("time_to_live", time_to_live)
 }
 
-func (m *Message) OverrideMsgId(override_msg_id string) *Message {
-	return m.Set("override_msg_id", override_msg_id)
+func (m *Request) OverrideMsgId(override_msg_id string)  {
+	m.Set("override_msg_id", override_msg_id)
 }
 
-func (m *Message) Sign(master_secret *string) bool {
+func (m *Request) Sign(master_secret string)  {
+	src := m.Values.Get("sendno") + m.Values.Get("receiver_type") + m.Values.Get("receiver_value") + master_secret
+//	fmt.Println(src)
+	sum := md5.Sum([]byte(src))
+	verification_code := hex.EncodeToString(sum[:])
+	m.Values.Set("verification_code", verification_code)
 
-	return true
 }
 
-func (m *Message) Send(master_secret *string) (*Response, error) {
+func (m *Request) send(url string) (*Response, error) {
 
-	//进行认证
-	if master_secret != nil {
-		m.Sign(master_secret)
-	}
 
-	resp, err := defaultHttpClient.PostForm(JPushServerUrl, m.Values)
+	resp, err := defaultHttpClient.PostForm(url, m.Values)
 	if err != nil {
 		return nil, err
 	}
-
 
 	defer resp.Body.Close()
 
@@ -149,17 +165,28 @@ func (m *Message) Send(master_secret *string) (*Response, error) {
 	//	responseContent := string(bytes)
 	err = json.Unmarshal(bytes, &jpushResponse)
 	if err != nil {
-		return nil, errors.New(err.Error() + " response: \n"  + string(bytes))
+		return nil, errors.New(err.Error() + " response: \n" + string(bytes))
 	}
 
+	// 如果失败，转换为 go 的 error
 	if jpushResponse.IsFailed() {
 		return &jpushResponse, errors.New(strconv.Itoa(jpushResponse.ErrCode) + ", " + jpushResponse.ErrMsg)
 	}
 
 	return &jpushResponse, nil
+
 }
 
 
+// 使用 http 协议
+func (m *Request) Send() (*Response, error) {
+	return m.send(JPushServerUrl)
+}
+
+// 使用 https 协议
+func (m *Request) SendSecure() (*Response, error) {
+	return m.send(JPushServerUrlSsl)
+}
 
 var defaultHttpClient *utils.HttpClient
 
