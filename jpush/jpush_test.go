@@ -1,9 +1,6 @@
 package jpush
 
-import (
-	"testing"
-	"log"
-)
+import "testing"
 
 
 
