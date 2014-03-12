@@ -1,7 +1,7 @@
 package jpush
 
 import (
-	"utils"
+	"github.com/wuyongzhi/gopush/utils"
 	"time"
 	"net/url"
 )
