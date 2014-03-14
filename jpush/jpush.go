@@ -22,11 +22,18 @@ type Request struct {
 	url.Values
 }
 
-type Message struct {
+type NotifyMessage struct {
 	BuilderId int		`json:"n_builder_id"`
 	Title string		`json:"n_title"`
 	Content string		`json:"n_content"`
 	Extras string		`json:"n_extras"`
+}
+
+type CustomMessage struct {
+	Message string		`json:"message"`
+	ContentType int    	`json:"content_type"`
+	Title string		`json:"title"`
+	Extras string		`json:"extras"`
 }
 
 type JPushMsgId interface {}
@@ -114,11 +121,27 @@ func (m *Request) MsgType(msg_type int)  {
 	m.SetInt("msg_type", msg_type)
 }
 
-func (m *Request) MsgContent(n_builder_id int, n_title, n_content, n_extras string) {
-	msg := Message{n_builder_id, n_title, n_content, n_extras}
+func (m *Request) MessageNotify(n_builder_id int, n_title, n_content, n_extras string) {
+	msg := NotifyMessage{n_builder_id, n_title, n_content, n_extras}
 	bytes, _ := json.Marshal(msg)
 	m.Set("msg_content", string(bytes))
+	m.SetInt("msg_type", MsgTypeNotify)
 }
+
+
+func (m *Request) MessageCustom(message, title, extras string, contentType int) {
+	msg := CustomMessage{
+		Message: message,
+		Title: title,
+		Extras: extras,
+		ContentType: contentType,
+	}
+	bytes, _ := json.Marshal(msg)
+	m.Set("msg_content", string(bytes))
+	m.SetInt("msg_type", MsgTypeCustom)
+}
+
+
 
 func (m *Request) SendDescription(send_description string)  {
 	m.Set("send_description", send_description)

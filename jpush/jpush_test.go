@@ -13,7 +13,7 @@ func Test_Request(t *testing.T) {
 //	m.ReceiverValue("value1","value2")
 	m.Platform("android")
 	m.Sign("master_secret")
-	m.MsgType(MsgTypeNotify)
+	m.MsgType(MsgTypeCustom)
 	m.MsgContent(0, "", "hello,world", "")
 
 	response, err := m.Send()
