@@ -32,7 +32,7 @@ type Message struct {
 type Response struct {
 	ErrCode int    `json:"errcode"`
 	ErrMsg  string `json:"errmsg"`
-	MsgId   string `json:"msg_id"`
+	MsgId   int64 `json:"msg_id"`
 }
 
 func NewRequest() *Request {
