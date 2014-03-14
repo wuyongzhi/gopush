@@ -224,7 +224,7 @@ func (m *Request) SendSecure() (*Response, error) {
 var defaultHttpClient *utils.HttpClient
 
 func init() {
-	timeout, _ := time.ParseDuration("10s")
+	timeout, _ := time.ParseDuration("60s")
 	defaultHttpClient = utils.NewHttpClient(20, timeout, timeout, false)
 	//defaultHttpClient.
 }
