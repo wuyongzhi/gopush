@@ -29,11 +29,22 @@ type Message struct {
 	Extras string		`json:"n_extras"`
 }
 
+type JPushMsgId interface {}
+
+var InvalidMsgId JPushMsgId = nil
+
 type Response struct {
 	ErrCode int    `json:"errcode"`
 	ErrMsg  string `json:"errmsg"`
-	MsgId   int64 `json:"msg_id"`
+	MsgId   JPushMsgId `json:"msg_id"`
 }
+
+type Response2 struct {
+	ErrCode int    `json:"errcode"`
+	ErrMsg  string `json:"errmsg"`
+
+}
+
 
 func NewRequest() *Request {
 	m := Request{}
