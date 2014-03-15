@@ -6,9 +6,7 @@ import (
 	"time"
 )
 
-type HttpClient struct {
-	http.Client
-}
+
 
 func TimeoutDialer(cTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
 	return func(netw, addr string) (net.Conn, error) {
@@ -26,9 +24,9 @@ func TimeoutDialer(cTimeout time.Duration) func(net, addr string) (c net.Conn, e
 func NewHttpClient(maxIdleConnsPerHost int,
 	connectTimeout time.Duration,
 	responseHeaderTimeout time.Duration,
-	disableKeepAlives bool) *HttpClient {
+	disableKeepAlives bool) *http.Client {
 
-	c := HttpClient{}
+	c := http.Client{}
 	c.Transport = &http.Transport{
 		Dial: TimeoutDialer(connectTimeout),
 		ResponseHeaderTimeout: responseHeaderTimeout,

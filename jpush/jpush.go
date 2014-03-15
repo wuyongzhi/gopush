@@ -3,14 +3,12 @@ package jpush
 import (
 	"encoding/json"
 	"errors"
-	"github.com/wuyongzhi/gopush/utils"
 	"io/ioutil"
 	"net/http"
 	_ "net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 	"crypto/md5"
 	"encoding/hex"
 )
@@ -176,8 +174,7 @@ func (m *Request) Sign(master_secret string)  {
 
 func (m *Request) send(url string) (*Response, error) {
 
-
-	resp, err := defaultHttpClient.PostForm(url, m.Values)
+	resp, err := http.PostForm(url, m.Values)
 	if err != nil {
 		return nil, err
 	}
@@ -221,10 +218,23 @@ func (m *Request) SendSecure() (*Response, error) {
 	return m.send(JPushServerUrlSsl)
 }
 
-var defaultHttpClient *utils.HttpClient
-
-func init() {
-	timeout, _ := time.ParseDuration("60s")
-	defaultHttpClient = utils.NewHttpClient(20, timeout, timeout, false)
-	//defaultHttpClient.
+// 使用 http 协议，并使用外部提供的 client
+func (m *Request) Send2(client * http.Client) (*Response, error) {
+	return m.send(JPushServerUrl)
 }
+
+// 使用 https 协议，并使用外部提供的 client
+func (m *Request) SendSecure2(client * http.Client) (*Response, error) {
+	return m.send(JPushServerUrlSsl)
+}
+
+
+//func (m *Request) Send(client *http.)
+//
+//var defaultHttpClient *utils.HttpClient
+//
+//func init() {
+//	timeout, _ := time.ParseDuration("60s")
+//	defaultHttpClient = utils.NewHttpClient(0, timeout, timeout, false)
+//	//defaultHttpClient.
+//}
