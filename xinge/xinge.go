@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 	"log"
+	"errors"
 )
 
 type ResultCommon struct {
@@ -126,7 +127,11 @@ func (me *Request) PushTagsAnd(tags ...string) (*PushTagsResult, error) {
 	me.prepare()
 
 	// tags 操作类型
-	me.Set("tags_op", "AND")
+	if len(tags) > 1 {
+		me.Set("tags_op", "AND")
+	} else if len(tags) == 0 {
+		return nil, errors.New("必须至少有一个有效的tag")
+	}
 
 	// tags 列表
 	tags_list, _ := json.Marshal(tags)
