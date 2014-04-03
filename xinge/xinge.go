@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strconv"
 	"time"
-	"log"
 	"errors"
+	"strings"
 )
 
 type ResultCommon struct {
@@ -21,7 +21,7 @@ type ResultCommon struct {
 	//	Result string	`json:"result"`
 }
 
-type PushTagsResult struct {
+type Result struct {
 	ResultCommon
 	Result struct {
 		PushId string `json:"push_id"`
@@ -100,8 +100,10 @@ func (me *Request) SetEnvironment(environment int) {
 }
 
 var Host = "openapi.xg.qq.com"
-var URI_SEND_TAGS = "/v2/push/tags_device"
-var URI_SEND_DEVICE = "/v2/push/single_device"
+var URI_PUSH_TAGS = "/v2/push/tags_device"
+var URI_PUSH_DEVICE = "/v2/push/single_device"
+var URI_PUSH_ACCOUNT = "/v2/push/single_account"
+var URI_PUSH_ALL = "/v2/push/all_device"
 var Method = "GET"
 
 func (me *Request) prepare() {
@@ -119,55 +121,42 @@ func (me *Request) prepare() {
 
 }
 
-func (me *Request) PushTagsAnd(tags ...string) (*PushTagsResult, error) {
+func (me *Request) PushTagsAnd(tags ...string) (*Result, error) {
 
-	//
-	// 准备必须参数
-	//
-	me.prepare()
+	return me.pushTags("AND", tags)
+}
 
-	// tags 操作类型
-	if len(tags) > 1 {
-		me.Set("tags_op", "AND")
-	} else if len(tags) == 0 {
-		return nil, errors.New("必须至少有一个有效的tag")
-	}
 
-	// tags 列表
-	tags_list, _ := json.Marshal(tags)
-	me.Set("tags_list", string(tags_list))
-
-	me.computeSign(URI_SEND_TAGS)
+func (me *Request) dopush(uri string, result interface {}) error {
 
 	var resp *http.Response
 	var err error
-	if Method == "POST" {
-		resp, err = http.PostForm("http://"+Host+URI_SEND_TAGS, me.Values)
+	if strings.ToUpper(Method) == "POST" {
+		resp, err = http.PostForm("http://"+Host+uri, me.Values)
 	} else {
 		queryString := me.Values.Encode()
-		url := "http://"+Host+URI_SEND_TAGS + "?" + queryString
-		log.Println(url)
+		url := "http://"+Host+uri + "?" + queryString
+		//		log.Println(url)
 		resp, err = http.Get(url)
 	}
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer resp.Body.Close()
 
 	resultbytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	result := PushTagsResult{}
-	err = json.Unmarshal(resultbytes, &result)
+	err = json.Unmarshal(resultbytes, result)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &result, nil
+	return nil
 }
 
 // 计算签名
@@ -181,7 +170,7 @@ func (me *Request) computeSign(uri string) {
 	//排序key
 	sort.Strings(keys)
 
-	buf := bytes.NewBufferString(Method + Host + uri)
+	buf := bytes.NewBufferString(strings.ToUpper(Method) + Host + uri)
 	for _, k := range keys {
 		buf.WriteString(k)
 		buf.WriteString("=")
@@ -191,25 +180,95 @@ func (me *Request) computeSign(uri string) {
 	buf.WriteString(me.secret)
 
 	src := buf.Bytes()
-	log.Println("src=", string(src))
+//	log.Println("src=", string(src))
 	result := md5.Sum(src)
 	sign := hex.EncodeToString(result[0:])
-	log.Println("sign=", sign)
+//	log.Println("sign=", sign)
 	me.Set("sign", sign)
 }
 
-func (me *Request) SendTagsOr(tags ...string) {
+func (me *Request) pushTags(op string, tags []string) (*Result, error) {
+	//
+	// 准备必须参数
+	//
+	me.prepare()
+
+	// tags 操作类型
+	if len(tags) > 1 {
+		me.Set("tags_op", op)
+	} else if len(tags) == 0 {
+		return nil, errors.New("必须至少有一个有效的tag")
+	}
+
+	// tags 列表
+	tags_list, _ := json.Marshal(tags)
+	me.Set("tags_list", string(tags_list))
+
+	me.computeSign(URI_PUSH_TAGS)
+
+	result := Result{}
+	err := me.dopush(URI_PUSH_TAGS, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 
 }
 
-func SendAccount(accessId int64, validTime int, secretKey string) {
-
+func (me *Request) PushTagsOr(tags ...string) (*Result, error) {
+	return me.pushTags("OR", tags)
 }
 
-func SendTags(accessId int64, validTime int, secretKey string) {
 
+func (me *Request) PushAccount(account string) (*Result, error) {
+	me.Values.Set("account", account)
+
+	me.prepare()
+
+	me.computeSign(URI_PUSH_ACCOUNT)
+
+	result := Result{}
+	err := me.dopush(URI_PUSH_ACCOUNT, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
-func SendAll() {
 
+
+
+
+func (me *Request) PushDevice(device_token string) (*Result, error) {
+	me.Values.Set("device_token", device_token)
+
+	me.prepare()
+
+	me.computeSign(URI_PUSH_DEVICE)
+
+	result := Result{}
+	err := me.dopush(URI_PUSH_DEVICE, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (me *Request) PushAll() (*Result, error) {
+//	me.Values.Set("device_token", device_token)
+
+	me.prepare()
+
+	me.computeSign(URI_PUSH_ALL)
+
+	result := Result{}
+	err := me.dopush(URI_PUSH_ALL, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
