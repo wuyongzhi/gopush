@@ -86,6 +86,7 @@ func (me *Request) SetValidTime(valid_time int) {
 func (me *Request) SetMessageType(messageType int) {
 	me.Set("message_type", strconv.Itoa(messageType))
 }
+// 设置消息离线存储时长，信鸽最长3天，秒为单位
 func (me *Request) SetExpireTime(expireTime int) {
 	me.Set("expire_time", strconv.Itoa(expireTime))
 }

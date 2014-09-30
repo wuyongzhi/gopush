@@ -73,8 +73,12 @@ func (m *Request) SetInt(key string, value int){
 	m.Set(key, strconv.Itoa(value))
 }
 
-func (m *Request) SendNo(sendno int){
-	m.SetInt("sendno", sendno)
+func (m *Request) SetInt64(key string, value int64){
+	m.Set(key, strconv.FormatInt(value, 10))
+}
+
+func (m *Request) SendNo(sendno int64){
+	m.SetInt64("sendno", sendno)
 }
 
 func (m *Request) AppKey(app_key string) {
@@ -155,6 +159,7 @@ func (m *Request) APNSProduction(apns_production int)  {
 	m.SetInt("apns_production", apns_production)
 }
 
+// 设置消息离线存储时长，秒为单位，最长10天
 func (m *Request) TimeToLive(time_to_live int)  {
 	m.SetInt("time_to_live", time_to_live)
 }
